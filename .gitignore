@@ -1,2 +1,10 @@
-node_modules
-.vscode
+.idea/
+.vscode/
+.DS_Store
+*.lock
+!yarn.lock
+*.log
+out/
+dist/
+node_modules/
+coverage/
