@@ -1,4 +1,4 @@
 import "./css/index.css";
-import { mapInit } from "./js/test";
+import { mapInit } from "./js/ymaps";
 
 window.onload = mapInit();
