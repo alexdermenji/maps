@@ -6,3 +6,11 @@ body {
 .header {
   color: red;
 }
+
+.reviews {
+  font-size: 20px;
+}
+
+.review__text {
+  font-size: 16px;
+}

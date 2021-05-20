@@ -8,24 +8,18 @@ function mapInit() {
       behaviors: ["drag"],
     });
 
+    //create cluster
+
     let clusterer = new ymaps.Clusterer({
-      groupByCoordinates: false,
+      groupByCoordinates: true,
       clusterDisableClickZoom: true,
-      clusterOpenBalloonOnClick: true,
-      clusterBalloonContentLayout: "cluster#balloonCarousel",
       clusterBalloonContentLayoutWidth: 200,
       clusterBalloonContentLayoutHeight: 330,
+      hasBalloon: false,
     });
+    myMap.geoObjects.add(clusterer);
 
     let coords;
-
-    const template = `<h2>Отзыв</h2> 
-    <form id='form'>
-    <p><input type='text' id='input__name' placeholder='Укажите ваше имя' name='name'></p> 
-    <input type='text' id='input__place' placeholder = 'Укажите место' name='place'>
-    <p><textarea id='input__review' placeholder ='Оставьте отзыв' name='review'></textarea></p> 
-    <p><button type='button' id='btn'>Добавить</button></p>  
-    </form>`;
 
     //      create localStorage
     let placemarksData;
@@ -38,49 +32,101 @@ function mapInit() {
 
     //      createPlacemark
 
-    function createPlaceMark(coords, data) {
-      let reviewsContent = `<b>${data.name}</b> [${data.place}]<p>${data.reviews}</p>`;
+    const template2 = Handlebars.compile(`
+    <ul class="reviews">
+    {{#each items}}
+        <li class="reviews__item review">
+            <div class="review__header">
+                <span class="review__name">{{name}}</span>
+                <span class="review__location">[{{place}}]</span>
+            </div>
+            <p class="review__text">{{review}}</p>
+        </li>
+    {{/each}} 
+</ul>
+    <h2>Отзыв</h2> 
+  <form id='form'>
+  <p><input type='text' id='input__name' placeholder='Укажите ваше имя' name='name'></p> 
+  <input type='text' id='input__place' placeholder = 'Укажите место' name='place'>
+  <p><textarea id='input__review' placeholder ='Оставьте отзыв' name='review'></textarea></p> 
+  <p><button type='button' id='btn'>Добавить</button></p>  
+  </form>`);
 
-      let placemark = new ymaps.Placemark(coords, {
-        balloonContentHeader: reviewsContent,
-        balloonContentBody: template,
+    function transformArray(placemarks, coordinates) {
+      let newArr = [];
+      placemarks.forEach((data) => {
+        if (coordinates.toString() === data.coords.toString()) {
+          newArr.push({
+            name: data.name,
+            place: data.place,
+            review: data.review,
+          });
+        }
+      });
+      return newArr;
+    }
+
+    //add click to clusterer
+
+    clusterer.events.add("click", (e) => {
+      coords = e.get("target").geometry.getCoordinates();
+      myMap.balloon.open(
+        coords,
+        template2({
+          items: transformArray(placemarksData, coords),
+        })
+      );
+    });
+
+    //create placemark
+
+    function createPlaceMark(ourCoords, data) {
+      let placemark = new ymaps.Placemark(ourCoords, {
+        balloonContentBody: template2({
+          items: [
+            {
+              name: data.name,
+              place: data.place,
+              review: data.review,
+            },
+          ],
+        }),
       });
 
-      myMap.geoObjects.add(placemark);
-
-      // clusterer.add(placemark);
-      // myMap.geoObjects.add(clusterer);
-
-      placemark.events.add("click", (e) => {
-        showBalloon(coords);
-      });
+      clusterer.add(placemark);
 
       return placemark;
     }
+
+    //      show placemarks on the map
     function showPlaceMarks(data) {
       for (let i = 0; i < data.length; i++) {
         createPlaceMark(data[i].coords, data[i]);
       }
     }
+
+    //      save to localStorage
     function saveToStorage(data, form, coords) {
       data.push({
         //добавляем метку в localStorage
-        id: data.length,
         name: form.elements.name.value,
         place: form.elements.place.value,
-        reviews: [form.elements.review.value],
+        review: form.elements.review.value,
         coords: coords,
       });
 
       storage.placemarks = JSON.stringify(data);
     }
 
+    //show placemarks on the map
     showPlaceMarks(placemarksData);
 
     //show balloon
     const showBalloon = function (coords) {
       myMap.balloon.open(coords, {
-        contentBody: template,
+        contentBody: template2({
+          items: transformArray(placemarksData, coords),
+        }),
       });
     };
 
